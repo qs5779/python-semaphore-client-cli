@@ -8,7 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.9"
 click = "^8.1.7"
-
+semaphore-client = {url = "https://privy.wtforg.net/wheels/semaphore_client-0.2.0-py3-none-any.whl"}
 
 [tool.poetry.group.test.dependencies]
 isort = "^5.13.2"
