@@ -1,0 +1,20 @@
+---
+version: '3'
+
+services:
+  semaphore:  # https://github.com/ansible-semaphore/semaphore
+    container_name: semaphore
+    ports:
+      - 3000:3000
+    image: semaphoreui/semaphore:latest
+    environment:
+      SEMAPHORE_DB_DIALECT: bolt
+      SEMAPHORE_ADMIN_PASSWORD: changeme
+      SEMAPHORE_ADMIN_NAME: test
+      SEMAPHORE_ADMIN_EMAIL: test@localhost
+      SEMAPHORE_ADMIN: test
+    volumes:
+      - ./docker-data/home:/etc/semaphore # config.json location
+      - ./docker-date/lib:/var/lib/semaphore # database.boltdb location (Not required if using mysql or postgres)
+    # restart: unless-stopped
+...
