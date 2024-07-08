@@ -1,22 +1,65 @@
 """Top level module config in semaphore_client_cli package."""
 
-"""Config level module for fastapi application."""
+from pathlib import Path
+from typing import Any, Optional
 
-import sys
-from typing import Optional
-
-from loguru import logger
+import click
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from semaphore_client.configuration import Configuration
+from wtforglib.files import load_yaml_file
 from wtforglib.options import Options
 
-from semaphore_client_cli.constants import VERSION
+
+def _load_config_file(config: str, debug: bool) -> dict[str, Any]:
+    """Load the configuration file."""
+    if not config:
+        home = Path.home()
+        base = "semaphore-client.yaml"
+        config_paths = (
+            home / ".config" / base,
+            home / ".{0}".format(base),
+            Path("/etc/{0}.yaml".format(base)),
+        )
+        for cp in config_paths:
+            if cp.is_file():
+                config = str(cp)
+                break
+    if debug:
+        click.echo("DEBUG: config file => {0}".format(config))
+    return load_yaml_file(config, missing_ok=False)
 
 
 class AppConfig(BaseModel):
     """Application configurations."""
 
     options: Optional[Options] = None
+
+    model_config = SettingsConfigDict(arbitrary_types_allowed=True)
+
+    @classmethod
+    def initialize(cls, opts: Options, ll: str) -> None:
+        """Initialize AppConfig.
+
+        Parameters
+        ----------
+        opts : Options
+            Options object
+        ll : str
+            Log level
+        """
+        debug = opts.options.get("debug", False)
+        cls.options = opts
+        config = Configuration()
+        if debug or ll == "DEBUG":
+            config.debug = True
+        settings = _load_config_file(  # noqa: WPS221
+            str(opts.options.get("config", "")),
+            bool(debug),
+        )
+        for key in ("host", "username", "password"):
+            setattr(config, key, settings.get(key, ""))
+        Configuration.set_default(config)
 
 
 class GlobalConfig(BaseSettings):
@@ -34,7 +77,6 @@ class GlobalConfig(BaseSettings):
     log_level: str = "DEBUG"
 
     model_config = SettingsConfigDict(extra="ignore", env_file=".env")
-
 
 
 class DevConfig(GlobalConfig):
@@ -66,15 +108,4 @@ class FactoryConfig:
         return DevConfig(env_prefix="DEV_")  # type: ignore [call-arg]
 
 
-def _initialize_logging() -> None:
-    """Adjust the logging level if necessary."""
-    level = GlobalConfig().log_level  # type: ignore [call-arg]
-    if level != "DEBUG":
-        logger.remove(0)
-        logger.add(sys.stderr, level=level)
-
-
 cfg = FactoryConfig(GlobalConfig().env_state)()  # type: ignore [call-arg]
-
-_initialize_logging()
-
