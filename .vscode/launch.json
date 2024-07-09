@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Next",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "semaphore_client_cli.cli",
+            "justMyCode": false,
+            "args": ["next"]
+        },
+        {
             "name": "Ping",
             "type": "debugpy",
             "request": "launch",

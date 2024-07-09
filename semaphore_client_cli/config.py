@@ -30,15 +30,18 @@ def _load_config_file(config: str, debug: bool) -> dict[str, Any]:
     return load_yaml_file(config, missing_ok=False)
 
 
-class AppConfig(BaseModel):
-    """Application configurations."""
+class AppConfig:
+    """App configuration."""
 
-    options: Optional[Options] = None
+    opts: Options
+    settings: dict[str, str]
 
-    model_config = SettingsConfigDict(arbitrary_types_allowed=True)
+    def __init__(self) -> None:
+        self.opts = Options()
+        self.settings = {}
+        self._initialized = False
 
-    @classmethod
-    def initialize(cls, opts: Options, ll: str) -> None:
+    def initialize(self, options: Options, ll: str) -> None:
         """Initialize AppConfig.
 
         Parameters
@@ -48,18 +51,27 @@ class AppConfig(BaseModel):
         ll : str
             Log level
         """
-        debug = opts.options.get("debug", False)
-        cls.options = opts
+        if self._initialized:
+            return
+        debug = options.options.get("debug", False)
+        self.opts = options
         config = Configuration()
         if debug or ll == "DEBUG":
             config.debug = True
-        settings = _load_config_file(  # noqa: WPS221
-            str(opts.options.get("config", "")),
+        self.settings = _load_config_file(  # noqa: WPS221
+            str(options.options.get("config", "")),
             bool(debug),
         )
         for key in ("host", "username", "password"):
-            setattr(config, key, settings.get(key, ""))
+            setattr(config, key, self.settings.get(key, ""))
         Configuration.set_default(config)
+        self._initialized = True
+
+
+class LocalConfig(BaseModel):
+    """Local configurations."""
+
+    ignore_me: bool = False
 
 
 class GlobalConfig(BaseSettings):
@@ -69,7 +81,7 @@ class GlobalConfig(BaseSettings):
     # there is a shell environment variable having the same name,
     # that will take precedence.
 
-    app_config: AppConfig = AppConfig()
+    local_config: LocalConfig = LocalConfig()
 
     # define global variables with the Field class
     env_state: Optional[str] = Field(None)
@@ -109,3 +121,5 @@ class FactoryConfig:
 
 
 cfg = FactoryConfig(GlobalConfig().env_state)()  # type: ignore [call-arg]
+
+app_cfg = AppConfig()
