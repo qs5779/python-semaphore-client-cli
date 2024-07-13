@@ -58,6 +58,7 @@ class AppConfig:
         config = Configuration()
         if debug or ll == "DEBUG":
             config.debug = True
+        self.logger = config.logger.get("package_logger")
         self.settings = _load_config_file(  # noqa: WPS221
             str(options.options.get("config", "")),
             bool(debug),
